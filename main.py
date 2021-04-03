@@ -1,5 +1,6 @@
 import requests
 import pandas as pd
+import numpy as np
 import time
 
 headers = {"User-Agent": "PostmanRuntime/7.26.8"}
@@ -32,9 +33,9 @@ def get_bktc_transaction_df(
     return df
 
 
-def prepare_transaction_df(df: pd.DataFrame) -> pd.DataFrame:
+def manipulate_transaction_df(df: pd.DataFrame) -> pd.DataFrame:
     # prepare for result
-    df["value"] = pd.to_numeric(df["value"]) / 10 ** pd.to_numeric(df["tokenDecimal"])
+    df["value"] = df["value"].astype(np.uint64) / 10 ** 18
     df = df[["hash", "from", "to", "value"]]
     df = df.rename(
         columns={
@@ -67,7 +68,30 @@ def main(address: str, start_block: int = 0) -> pd.DataFrame:
         return pd.DataFrame()
 
 
+def get_balance(address: str) -> int:
+    df = get_bktc_transaction_df(address)
+    return (df["value"].astype(np.uint64) / 10 ** 18).sum()
+
+
+def get_balance_df(address_list) -> pd.DataFrame:
+    bal_dict = dict()
+    for addr in address_list:
+        bal_dict[addr] = get_balance(addr)
+    df = pd.Series(bal_dict).to_frame(name="Balance")
+    return df
+
+
 if __name__ == "__main__":
     init_address = "0xEcA19B1a87442b0c25801B809bf567A6ca87B1da".lower()
     transaction_df = main(init_address)
-    transaction_df = prepare_transaction_df(transaction_df)
+    transaction_df = manipulate_transaction_df(transaction_df)
+    print("Out put 1:")
+    print(transaction_df)
+
+    address_list = set(transaction_df["From (address)"]).union(
+        set(transaction_df["To (address)"])
+    )
+
+    balance_df = get_balance_df(address_list)
+    print("Out put 2:")
+    print(balance_df)
