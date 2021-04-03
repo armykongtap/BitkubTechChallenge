@@ -1,7 +1,8 @@
-import requests
-import pandas as pd
-import numpy as np
 import time
+
+import numpy as np
+import pandas as pd
+import requests
 
 headers = {"User-Agent": "PostmanRuntime/7.26.8"}
 session = requests.Session()
@@ -35,7 +36,7 @@ def get_bktc_transaction_df(
 
 def manipulate_transaction_df(df: pd.DataFrame) -> pd.DataFrame:
     # prepare for result
-    df["value"] = df["value"].astype(np.uint64) / 10 ** 18
+    df["value"] = df["value"].str[:-18].astype(np.uint64)
     df = df[["hash", "from", "to", "value"]]
     df = df.rename(
         columns={
@@ -70,7 +71,7 @@ def main(address: str, start_block: int = 0) -> pd.DataFrame:
 
 def get_balance(address: str) -> int:
     df = get_bktc_transaction_df(address)
-    return (df["value"].astype(np.uint64) / 10 ** 18).sum()
+    return (df["value"].str[:-18].astype(np.uint64)).sum()
 
 
 def get_balance_df(address_list) -> pd.DataFrame:
